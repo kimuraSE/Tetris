@@ -1,30 +1,90 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tetris/main.dart';
+import 'package:tetris/models/game_engine.dart';
+import 'package:tetris/ui/home/home_view.dart';
+import 'package:tetris/ui/play/play_view.dart';
+import 'package:tetris/ui/play/play_view_model.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Home が表示される', (tester) async {
+    await tester.pumpWidget(const MissionPackApp());
+    expect(find.text('ミッションパック'), findsOneWidget);
+    expect(find.text('スタート'), findsOneWidget);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('スタートで Play へ遷移する', (tester) async {
+    await tester.pumpWidget(const MissionPackApp());
+    await tester.tap(find.text('スタート'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ミッション'), findsWidgets);
+    expect(find.byType(PlayView), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('PlayViewModel dispose でループが止まる', (tester) async {
+    final vm = PlayViewModel(missionId: 'm01');
+    expect(vm.isLoopRunning, isTrue);
+    vm.dispose();
+    expect(vm.isLoopRunning, isFalse);
+  });
+
+  testWidgets('操作ボタンがエンジンに伝わる', (tester) async {
+    final vm = PlayViewModel(missionId: 'm01');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PlayView(missionId: 'm01', viewModel: vm),
+      ),
+    );
+    final xBefore = vm.engine.active?.x;
+    await tester.tap(find.byTooltip('右'));
     await tester.pump();
+    expect(vm.engine.active?.x, isNot(equals(xBefore)));
+    await tester.pumpWidget(const SizedBox.shrink());
+    vm.dispose();
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('クリア／失敗オーバーレイともう一度・ホームへ', (tester) async {
+    final vm = PlayViewModel(missionId: 'm01');
+
+    // 強制的に失敗状態へ
+    while (vm.status == GameStatus.playing) {
+      vm.hardDrop();
+    }
+    expect(vm.isTerminal, isTrue);
+    expect(vm.isLoopRunning, isFalse);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeView(),
+      ),
+    );
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+    navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => PlayView(missionId: 'm01', viewModel: vm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('失敗…'), findsOneWidget);
+    expect(find.text('もう一度'), findsOneWidget);
+    expect(find.text('ホームへ'), findsOneWidget);
+
+    await tester.tap(find.text('もう一度'));
+    await tester.pump();
+    expect(vm.status, GameStatus.playing);
+    expect(vm.missionId, 'm01');
+
+    // 再度失敗させてホームへ
+    while (vm.status == GameStatus.playing) {
+      vm.hardDrop();
+    }
+    await tester.pump();
+    await tester.tap(find.text('ホームへ'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeView), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    vm.dispose();
   });
 }
