@@ -1,0 +1,60 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+context: |
+  Tech stack: Language Dart, Framework Flutter
+
+  OpenSpec artifacts (including proposal, specs, design, and tasks) must be written in Japanese. Preserve required schema/template markers and identifiers.
+
+  Architecture: Flutter公式推奨アーキテクチャ（MVVM + 任意 Domain）。いわゆる Clean Architecture 寄りの層分けを含む。
+  Reference:
+  - https://github.com/flutter/samples/tree/main/compass_app/app (branch main, related commit 0c5ca75d)
+  - https://docs.flutter.dev/app-architecture/guide
+  - https://docs.flutter.dev/app-architecture/case-study
+  Adopted conventions:
+  - UI層: View（Widget構成）と ViewModel。View は表示・イベント伝達のみ。データ関連ロジックは ViewModel。
+  - View と ViewModel は機能単位で 1:1。
+  - Data層: Repository（データの Single Source of Truth）と Service（外部API等のステートレスなラッパ）。
+  - 依存方向: View → ViewModel → Repository（→ Service）。Repository 同士は互いに知らない。
+  - 配置: lib/ui/ は feature 単位、lib/data/ は type 単位（repositories / services）。共有UIは ui/core/。
+  - Domain（任意）: models は共有。UseCase は複数 Repository の合成・複雑ロジック・複数 ViewModel での再利用が必要なときだけ追加。ViewModel は Repository 直アクセス可。
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
+
+operations:
+  apply:
+    guidance:
+      - 一度に着手・実装するタスクは1つだけとする。
+      - そのタスクを実装し、完了したら次のタスクには着手せず停止する。
+      - 完了したタスクの内容と確認結果をユーザーへ報告し、確認を求める。
+      - ユーザーからそのタスクについて明示的な承認を得た場合のみ、次のタスクへ着手する。
+      - 無応答や事前の包括的な実装依頼を、タスク完了後の承認とみなさない。
+      - 最後のタスクを含め、すべてのタスクでこの報告・確認・承認のループを繰り返す。
